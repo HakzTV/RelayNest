@@ -1,6 +1,6 @@
 # RelayNest desktop development and testing
 
-RelayNest uses Python and pywebview to open a desktop window. On Windows pywebview uses Microsoft WebView2; it does not launch the Electron executable that was blocked on this device. This is an early development build, not an installer. Organization security policies can still block Python, its dependencies or WebView2. Never change or bypass those policies without your administrator.
+RelayNest uses Python and pywebview to open a desktop window. On Windows pywebview uses Microsoft WebView2; it does not launch the Electron executable that was blocked on this device. This is a development build; the Windows executable has not completed packaged release verification. Organization security policies can still block Python, its dependencies or WebView2. Never change or bypass those policies without your administrator.
 
 ## Windows setup and launch
 
@@ -28,12 +28,12 @@ On macOS and Linux use `python3`, and install the pywebview operating-system pre
 Write a failing behavior test first, implement the smallest change, make the test pass, and refactor while tests remain green. Add a regression test for each reproducible bug.
 
 ```powershell
-python -m unittest -v test_receive test_desktop_engine test_desktop_host
 npm install
+npm run test:engine
 npm run test:ui
 ```
 
-If using `.venv`, run Python tests with `.\.venv\Scripts\python.exe` and set `$env:RELAYNEST_PYTHON = (Resolve-Path .\.venv\Scripts\python.exe).Path` before the UI test. The Windows Playwright test opens the actual source-based desktop window, connects to WebView2 with a debugging port enabled only during the test, and exercises real local sending and receiving with temporary files. Do not use this test configuration for normal operation or on an untrusted machine. The test is Windows-specific; macOS and Linux desktop automation still needs a separate approach. The Playwright test requires Node and installed npm dependencies, but the app does not.
+`npm run test:engine` and the Windows desktop UI test use the project `.venv` when present. Set `$env:RELAYNEST_PYTHON` to a Python executable path to select a different interpreter for the desktop UI test. The Windows Playwright test opens the actual source-based desktop window, connects to WebView2 with a debugging port enabled only during the test, and exercises real local sending and receiving with temporary files. Do not use this test configuration for normal operation or on an untrusted machine. The test is Windows-specific; macOS and Linux desktop automation still needs a separate approach. The browser-level tests use installed Microsoft Edge. The Playwright tests require Node and installed npm dependencies, but launching `desktop_host.py` directly does not.
 
 Python tests exercise validation, engine events, and a local HTTP transfer including repeat skip and newer-source update. These do not replace a cross-machine transfer test or installer verification.
 
@@ -64,3 +64,7 @@ These browser tests use a mocked desktop bridge. Run the desktop WebView2 test a
 ## Windows packaging
 
 `npm run build` produces a single executable containing the transfer engine rather than embedding a separate worker executable. `npm run test:package` launches the actual executable with an explicit self-test and checks a real local sender and receiver, repeat skip, and newer-source update. The source-based equivalent has passed, but Windows Defender blocked the packaged executable on this machine, so the packaged test remains unverified. See `WINDOWS_INSTALL.md`.
+
+## Refresh the README screenshots
+
+On Windows, with `.venv` and the npm test dependencies installed, run `node scripts/capture-readme.cjs`. The script launches the source-based desktop app, connects to its WebView2 instance using a temporary debugging port, and captures the Receive, Send and light-mode Settings views in `docs/screenshots`. Close other apps or enter no personal data in the capture window. The port is enabled only for the capture process; review the images before sharing them.

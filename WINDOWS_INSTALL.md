@@ -1,14 +1,14 @@
 # RelayNest Windows installation and signing
 
-## Why the executable does not open on this laptop
+## Known Windows executable block
 
-The error “Windows cannot access the specified device, path, or file” is caused by a confirmed Windows Defender block for `dist\RelayNest.exe`. Event 1121 reports the organization-managed ASR rule `01443614-CD74-433A-B99E-2ECDC07BFC25`. This rule checks executable reputation, including prevalence, age, and trusted-list criteria; the event alone does not say that RelayNest is malware.
+On the development laptop, the error “Windows cannot access the specified device, path, or file” was traced to a Windows Defender block for `dist\RelayNest.exe`. Other machines may have different causes for this message. Event 1121 reports the organization-managed ASR rule `01443614-CD74-433A-B99E-2ECDC07BFC25`. This rule checks executable reputation, including prevalence, age, and trusted-list criteria; the event alone does not say that RelayNest is malware.
 
-The executable has been built, but the packaged app has not passed its tests because this laptop blocks it. The Python desktop app's real send and receive workflows have passed tests. Do not distribute the executable as a verified release yet.
+The executable has been built, but the packaged app has not passed its tests because the development laptop blocked it. The Python desktop app's real send and receive workflows have passed tests. Do not distribute the executable as a verified release yet.
 
-WebView2 runtime files are already present on this laptop, and the source-based desktop app has opened. The downloaded Fixed Version `.cab` is not a normal installer and does not resolve the Defender block. Windows 11 typically already has the Evergreen WebView2 runtime; on another laptop, see https://developer.microsoft.com/microsoft-edge/webview2/ if it is missing.
+The source-based app opened with the WebView2 runtime on the development laptop. A Fixed Version `.cab` requires app-specific configuration and does not resolve an executable security block. If the runtime is missing on a target laptop, see https://developer.microsoft.com/microsoft-edge/webview2/ for the Evergreen Runtime.
 
-## Get the app running now on this laptop
+## Run the development app
 
 1. Open PowerShell in the RelayNest project directory.
 2. Run:
@@ -21,12 +21,12 @@ WebView2 runtime files are already present on this laptop, and the source-based 
 
 ## Resolve the executable block
 
-The rule is managed by the device's administrator. Installing WebView2 or reinstalling dependencies will not change it. For this exact laptop:
+The rule is managed by the device's administrator. Installing WebView2 or reinstalling dependencies will not change it. For the confirmed development-laptop block:
 
 1. Give the device policy owner these details for review:
 
    ```text
-   File: C:\Users\TelvinCaesarVarfley\dev\2026\RelayNest\dist\RelayNest.exe
+   File: <your RelayNest project folder>\dist\RelayNest.exe
    Windows Defender Operational event: 1121
    ASR rule: 01443614-CD74-433A-B99E-2ECDC07BFC25
    ```
@@ -62,7 +62,7 @@ Signing gives a release a verifiable publisher identity and protects its content
    ```
 
    Stop if the build fails. Signing must be repeated after every rebuild because a rebuild changes the executable.
-4. Find the certificate's **40-character thumbprint** from step 2 and the **HTTPS RFC 3161 timestamp URL** supplied by the certificate provider. Do not type the example URL as if it were a real signing service. This machine has SignTool at the Windows SDK path shown below. Enter the two values when prompted:
+4. Find the certificate's **40-character thumbprint** from step 2 and the **HTTPS RFC 3161 timestamp URL** supplied by the certificate provider. Do not type the example URL as if it were a real signing service. Locate the x64 `signtool.exe` in your Windows SDK installation. Replace the SignTool path below if your SDK version differs. Enter the certificate thumbprint and provider URL when prompted:
 
    ```powershell
    $certThumbprint = Read-Host 'Paste the code-signing certificate thumbprint'
@@ -71,7 +71,7 @@ Signing gives a release a verifiable publisher identity and protects its content
    ```
 
    The script signs with SHA-256, requests a timestamp, and runs signature verification. It has not been tested with an actual certificate in this environment. If Defender blocks access to `RelayNest.exe`, signing may also fail until the policy owner or Microsoft resolves the block.
-5. If signing and verification succeed, rerun `npm run test:package` and `npm run test:packaged-ui`. A valid signature proves neither that these tests pass nor that this laptop's managed rule will allow the executable.
+5. If signing and verification succeed, rerun `npm run test:package` and `npm run test:packaged-ui`. A valid signature proves neither that these tests pass nor that a managed device's rule will allow the executable.
 
 ## Build and test the Windows executable
 
@@ -86,7 +86,7 @@ npm run test:packaged-ui
 
 The build creates `.venv` if needed and installs `requirements-build.txt`, so access to the configured Python package index is required. It writes `dist\RelayNest.exe`. If the build fails, do not use a pre-existing file in `dist` as if it were the new build.
 
-`test:engine` tests the source transfer engine. `test:package` starts the actual packaged executable in self-test mode and checks a local sender, receiver, repeat skip and newer-source update. `test:packaged-ui` launches the actual executable's window, using WebView2 debugging only during the test, and tests sending and receiving with temporary files. The two packaged checks are currently blocked on this laptop. They require Windows to permit the executable; the UI test additionally requires WebView2 and npm test dependencies.
+`test:engine` tests the source transfer engine. `test:package` starts the actual packaged executable in self-test mode and checks a local sender, receiver, repeat skip and newer-source update. `test:packaged-ui` launches the actual executable's window, using WebView2 debugging only during the test, and tests sending and receiving with temporary files. The two packaged checks were blocked on the development laptop. They require Windows to permit the executable; the UI test additionally requires WebView2 and npm test dependencies.
 
 The GitHub workflow `.github/workflows/windows-package.yml` builds and runs these packaged checks on a Windows runner before uploading its artifact. It has not yet been run in this repository. The runner needs working WebView2 desktop automation; a second-machine transfer test remains necessary. A GitHub artifact is not approval to run the file on a managed device.
 

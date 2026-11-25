@@ -1,53 +1,80 @@
 # RelayNest
 
-RelayNest copies folders between machines on a trusted network. The sending machine shares a folder using a range-capable HTTP server; the receiving machine scans its directory listings and downloads files in parallel. The project is a starting point for future improvements.
+RelayNest is a desktop app for copying folders between computers on a trusted network. Choose **Send** on the computer with the files and **Receive** on the other computer. The receiver recreates folders, downloads files in parallel, and checks existing files before downloading them again.
 
-## Requirements
+RelayNest is a development build. The Windows executable can be built, but its packaged app tests and a transfer between two different machines have not yet been verified. On the development laptop, Windows Defender blocked the executable from running. See [Windows build, signing and installation](WINDOWS_INSTALL.md) before sharing a build.
 
-- Python 3.8 or newer on both machines.
-- Network access from the receiver to the sender on port 8000 (or your chosen port).
-- `RangeHTTPServer` installed on the sender. The receiver uses Python's standard library only.
+## Screenshots
 
-## Start the sender
+These screenshots show the source-based desktop app in its ready state.
 
-In PowerShell on the machine **with the files**, from the RelayNest project folder:
+**Receive files**
+
+![RelayNest Receive screen showing the source address and destination folder](docs/screenshots/receive.png)
+
+**Share a folder**
+
+![RelayNest Send screen showing the folder, port and trusted-network notice](docs/screenshots/send.png)
+
+**Light mode settings**
+
+![RelayNest Settings screen in light mode](docs/screenshots/settings-light.png)
+
+## Run the desktop app from source
+
+On Windows, install Python 3.13 and Node.js. From the RelayNest project folder in PowerShell:
 
 ```powershell
-py -m pip install -r requirements.txt
-py server.py
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-desktop.txt
+npm start
 ```
 
-Set `SHARE_FOLDER` in `server.py` to the folder you want to share and change `PORT` there if needed. The supplied default is `C:\Users\TelvinCaesarVarfley\.codex`; confirm that this is the folder you intend to expose before starting the server. Run `ipconfig` to find the sender's IPv4 address. Leave the server running until the transfer finishes; press Ctrl+C to stop it.
-
-## Receive files
-
-On the other machine, set `BASE_URL` and `DESTINATION` near the top of `receive.py` to the sender's IP address and your chosen destination. Then run the receiver from the RelayNest folder:
+`npm start` uses the project `.venv` when available. Alternatively, start the app without Node.js:
 
 ```powershell
-py receive.py
+.\.venv\Scripts\python.exe desktop_host.py
 ```
 
-The receiver creates the destination and its subfolders. Change `MAX_WORKERS` in `receive.py` to adjust the default of six simultaneous downloads. The receiver also works with an existing compatible HTTP directory-listing server; no custom server is required on that machine.
+The Windows desktop interface uses the WebView2 Runtime. The project also targets macOS and Linux through pywebview, but those platforms and their setup have not been verified. For development setup, tests, and a one-machine walkthrough, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Restarting and exclusions
+## Transfer between two computers
 
-Keep the destination's `.transfer-state` folder between runs. It contains a SQLite record of completed downloads, partial downloads, and a failure log. Every run checks the sender's metadata, including for previously completed files. An existing destination file is skipped when its modification time is equal to or newer than the source; a newer source is downloaded and replaces it. Downloaded files retain the source modification time. HTTP dates have one-second precision, so changes within the same second may not be detected. If an existing file cannot be compared because the server supplies no valid `Last-Modified` date, the receiver reports a failure and leaves it untouched. Partial downloads resume if the server supplies a usable modification date or ETag and supports range requests; otherwise they restart. Partial files from earlier versions of the script are not automatically imported.
+1. Start RelayNest on both computers. Use a trusted network and test with non-sensitive files first.
+2. On the computer **with the files**, choose **Send**, select the source folder, set the port if needed, and choose **Start sharing**. The Activity page shows when the server is listening. Keep the window open.
+3. On the sender, run `ipconfig` in a terminal and note its local IPv4 address. The receiver must be able to reach that address and the selected port; a firewall may need an approved rule.
+4. On the receiving computer, choose **Receive**. Enter the sender's address, such as `http://192.168.1.10:8000/`, replacing the example IP and port with the actual values. Choose a destination folder and select **Start transfer**.
+5. Open **Activity** to review the log and summary. Check the destination files, then stop sharing on the sender.
 
-The receiver excludes `node_modules`, `google-cloud-sdk`, common caches and virtual environments, and selected generated files; see the constants in `receive.py` to adjust the list. It includes `.git` and its contents. Close programs and avoid Git operations that change source files during the transfer. Install application dependencies and tools such as the Google Cloud SDK separately on the receiving machine.
+A single app window handles one active send or receive session at a time. For a one-computer test, use two app windows, two different folders, and `http://127.0.0.1:8000/` as described in [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## Limitations
+## What happens on a repeat transfer
 
-- Modification times determine whether existing files are updated. Equal or newer local timestamps do not prove identical content; clock differences and changes within one second can cause skips. This tool does not verify source hashes.
-- Source files should remain unchanged while being downloaded; metadata checks cannot guarantee a consistent snapshot.
-- The receiver does not delete extra destination files. A fresh destination is preferable for a clean copy, particularly for Git repositories.
-- Git worktrees and submodules can reference paths or repositories outside the shared folder; copying a `.git` file alone may not preserve their history. Git configuration may also contain machine-specific paths.
-- The sender is unauthenticated and unencrypted HTTP. Anyone who can reach it can browse and download the shared files, which may include secrets and Git configuration. Use a trusted network, share only what you intend, and stop the server after use.
-- Avoid running multiple receivers against the same destination at the same time.
+The receiver checks the sender's metadata on every run. When a destination file already exists:
 
-## Desktop development build
+- A source with a newer modification date replaces it after the download finishes.
+- A file with an equal or newer local modification date is skipped.
+- If the sender doesn't provide a valid `Last-Modified` date, the existing file is left untouched and the transfer reports a failure.
 
-The initial Python desktop interface can send and receive using the existing Python engine. See [DEVELOPMENT.md](DEVELOPMENT.md) for installation, automated tests, and a step-by-step manual test. This is not yet a packaged release; it requires Python and desktop dependencies and is intended for trusted networks. Node.js is needed for Playwright tests.
+Downloaded files retain the source modification date. HTTP dates have one-second precision, and timestamps do not prove that contents match. Clock differences or changes within one second can therefore lead to a skip; RelayNest does not verify file hashes. Extra destination files are not deleted.
 
-## Windows package
+Keep the destination's `.transfer-state` folder between runs. It stores partial downloads, a record of completed downloads, and a failure log. Partial downloads can resume when the sender supplies suitable metadata and supports range requests; otherwise they restart. Avoid running multiple receivers against the same destination at the same time.
 
-Run `npm run build` on 64-bit Windows to set up the build environment and package the desktop app. See [WINDOWS_INSTALL.md](WINDOWS_INSTALL.md) for prerequisites, verification, GitHub Actions, and the current Windows Defender blocker. A successful package and a clean-machine test are required before distribution.
+The receiver excludes dependency folders, common caches and virtual environments, plus certain generated files. The lists are defined in [receive.py](receive.py). `.git` contents are included; copying a worktree or submodule may not preserve references outside the shared folder.
+
+## Activity and settings
+
+**Activity** shows the current session's output, status, and errors. **Settings** offers light and dark themes, a default port, and a default destination. These settings and activity are kept only while the app window is open. The existing-file skip policy is always on.
+
+## Security and current limits
+
+- The sharing server is unauthenticated and uses unencrypted HTTP. Anyone who can reach it can browse and download the shared folder. Share only intended files on a trusted network and stop the server afterward.
+- The receiver's path and symlink handling needs further hardening for untrusted sources. Source files should remain unchanged during a transfer.
+- Pairing, encrypted transport, persistent history, automatic updates, per-file retry, and measured overall progress are not implemented.
+- The executable is an unsigned development build, not a verified release. Runtime behavior and transfer between different operating systems still require testing.
+
+## Build and test
+
+On 64-bit Windows, `npm run build` creates `dist\RelayNest.exe`. `npm run test:engine` tests the source engine; `npm run test:package` and `npm run test:packaged-ui` test the executable and its window. The packaged tests have been blocked by Windows security on the development laptop. See [WINDOWS_INSTALL.md](WINDOWS_INSTALL.md) for build prerequisites, signing, troubleshooting and release checks.
+
+RelayNest also retains the original `server.py` and `receive.py` command-line scripts. They use settings near the top of each file; confirm those settings before using them. The desktop app does not require editing those constants.
