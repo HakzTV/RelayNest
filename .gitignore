@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+.transfer-state/
+node_modules/
+.local-deps/
+playwright-report/
+test-results/
+build/
+dist/

@@ -1,0 +1,35 @@
+name: Windows package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          architecture: 'x64'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: .\.venv\Scripts\python.exe -m unittest -v test_receive test_desktop_engine test_desktop_host
+      - run: .\.venv\Scripts\python.exe test_packaged_transfer.py
+      - name: Test packaged desktop window and transfers
+        run: npm run test:packaged-ui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RelayNest-windows-x64
+          path: dist/RelayNest.exe
+          if-no-files-found: error
+          retention-days: 14

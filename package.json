@@ -1,0 +1,18 @@
+{
+  "name": "relaynest-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RelayNest desktop transfer application",
+  "scripts": {
+    "start": "python launch_desktop.py",
+    "test:ui": "playwright test",
+    "test:engine": "python run_engine_tests.py",
+    "build": "powershell -NoProfile -File build-windows.ps1",
+    "test:package": "python test_packaged_transfer.py",
+    "sign": "powershell -NoProfile -File sign-windows.ps1",
+    "test:packaged-ui": "node tests/run-packaged-ui.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}
