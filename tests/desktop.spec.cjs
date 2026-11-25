@@ -23,7 +23,7 @@ async function openDesktop() {
   const executable = packaged || python;
   const args = packaged ? [] : ['-u', path.join(root, 'desktop_host.py')];
   const child = spawn(executable, args, {
-    cwd: root, env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` }, windowsHide: true
+    cwd: root, env: { ...process.env, RELAYNEST_WEBVIEW_DEBUG_PORT: String(port) }, windowsHide: true
   });
   let output = '';
   let launchError;

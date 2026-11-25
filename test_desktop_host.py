@@ -8,10 +8,19 @@ import unittest
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from desktop_host import DesktopAPI
+from desktop_host import DesktopAPI, configure_webview_debugging
 
 
 class DesktopAPITests(unittest.TestCase):
+    def test_webview_debug_port_is_explicit_and_validated(self):
+        settings = {'REMOTE_DEBUGGING_PORT': None}
+        configure_webview_debugging(settings, {})
+        self.assertIsNone(settings['REMOTE_DEBUGGING_PORT'])
+        configure_webview_debugging(settings, {'RELAYNEST_WEBVIEW_DEBUG_PORT': '19222'})
+        self.assertEqual(settings['REMOTE_DEBUGGING_PORT'], 19222)
+        with self.assertRaises(ValueError):
+            configure_webview_debugging(settings, {'RELAYNEST_WEBVIEW_DEBUG_PORT': '65536'})
+
     def test_rejects_invalid_source_and_destination(self):
         api = DesktopAPI()
         self.assertFalse(api.start('receive', 'file:///tmp/', 'missing')['ok'])

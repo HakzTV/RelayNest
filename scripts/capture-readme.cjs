@@ -15,7 +15,7 @@ async function main() {
   await new Promise((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
   const child = spawn(python, ['-u', path.join(root, 'desktop_host.py')], {
     cwd: root,
-    env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` },
+    env: { ...process.env, RELAYNEST_WEBVIEW_DEBUG_PORT: String(port) },
     windowsHide: true
   });
   let errorText = '';

@@ -88,7 +88,7 @@ The build creates `.venv` if needed and installs `requirements-build.txt`, so ac
 
 `test:engine` tests the source transfer engine. `test:package` starts the actual packaged executable in self-test mode and checks a local sender, receiver, repeat skip and newer-source update. `test:packaged-ui` launches the actual executable's window, using WebView2 debugging only during the test, and tests sending and receiving with temporary files. The two packaged checks were blocked on the development laptop. They require Windows to permit the executable; the UI test additionally requires WebView2 and npm test dependencies.
 
-The GitHub workflow `.github/workflows/windows-package.yml` builds and runs these packaged checks on a Windows runner before uploading its artifact. It has not yet been run in this repository. The runner needs working WebView2 desktop automation; a second-machine transfer test remains necessary. A GitHub artifact is not approval to run the file on a managed device.
+The GitHub workflow `.github/workflows/windows-package.yml` builds and runs these packaged checks on a Windows runner before uploading its artifact. An earlier GitHub run passed the packaged transfer self-test but failed to connect to WebView2 for the desktop tests. The workflow now targets `windows-2022` and the test explicitly configures the pywebview debugging port; the revised workflow must be run on GitHub to verify the fix. If the UI test fails, inspect the `RelayNest-ui-test-diagnostics` artifact and the reported WebView2 runtime version. A second-machine transfer test remains necessary, and a GitHub artifact is not approval to run the file on a managed device.
 
 ## After the package passes: test on another laptop
 

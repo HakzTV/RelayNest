@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # WebView2 automation has reported regressions on newer Windows runner images.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,6 +26,17 @@ jobs:
       - run: npm run build
       - run: .\.venv\Scripts\python.exe -m unittest -v test_receive test_desktop_engine test_desktop_host
       - run: .\.venv\Scripts\python.exe test_packaged_transfer.py
+      - name: Report WebView2 runtime
+        shell: pwsh
+        run: |
+          $keys = @(
+            'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+            'HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          )
+          foreach ($key in $keys) {
+            $runtime = Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue
+            if ($runtime) { Write-Host "WebView2 Runtime: $($runtime.pv) ($key)" }
+          }
       - name: Test packaged desktop window and transfers
         run: npm run test:packaged-ui
       - uses: actions/upload-artifact@v4
@@ -33,3 +45,11 @@ jobs:
           path: dist/RelayNest.exe
           if-no-files-found: error
           retention-days: 14
+      - name: Upload UI test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RelayNest-ui-test-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

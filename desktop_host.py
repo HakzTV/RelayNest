@@ -1,5 +1,6 @@
 """Python desktop host for RelayNest's existing interface and transfer engine."""
 import multiprocessing
+import os
 import traceback
 from pathlib import Path
 from queue import Empty, Queue
@@ -8,6 +9,21 @@ import threading
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
+
+
+def configure_webview_debugging(settings, environ):
+    """Enable a WebView2 debugging port only when explicitly requested for testing."""
+    value = environ.get('RELAYNEST_WEBVIEW_DEBUG_PORT')
+    if value is None:
+        return
+    try:
+        port = int(value)
+        if not 1 <= port <= 65535:
+            raise ValueError()
+    except ValueError:
+        raise ValueError('RELAYNEST_WEBVIEW_DEBUG_PORT must be a port from 1 to 65535.')
+    settings['REMOTE_DEBUGGING_PORT'] = port
+
 class QueueWriter:
     """Stream worker output to the desktop without a separate executable."""
     encoding = 'utf-8'
@@ -138,6 +154,7 @@ def main():
     except ImportError:
         print('Install desktop dependencies: python -m pip install -r requirements-desktop.txt', file=sys.stderr)
         return 1
+    configure_webview_debugging(webview.settings, os.environ)
     api = DesktopAPI()
     window = webview.create_window('RelayNest', (ROOT / 'desktop' / 'index.html').as_uri(), js_api=api, width=1280, height=850, min_size=(650, 580), background_color='#0d1217')
     api._window = window
