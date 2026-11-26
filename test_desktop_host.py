@@ -12,6 +12,40 @@ from desktop_host import DesktopAPI, configure_webview_debugging
 
 
 class DesktopAPITests(unittest.TestCase):
+    def test_sender_receives_transfer_start_and_finish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, target = root / 'source', root / 'target'
+            source.mkdir(); target.mkdir()
+            (source / 'example.txt').write_text('sample', encoding='utf-8')
+            with socket.socket() as sock:
+                sock.bind(('127.0.0.1', 0))
+                port = sock.getsockname()[1]
+            sender, receiver = DesktopAPI(), DesktopAPI()
+            events = []
+            try:
+                self.assertTrue(sender.start('send', str(source), str(port))['ok'])
+                for _ in range(200):
+                    events.extend(sender.poll())
+                    if any(event['type'] == 'share_ready' for event in events):
+                        break
+                    time.sleep(.05)
+                self.assertTrue(any(event['type'] == 'share_ready' for event in events), events)
+                self.assertTrue(receiver.start('receive', f'http://127.0.0.1:{port}/', str(target))['ok'])
+                for _ in range(300):
+                    events.extend(sender.poll())
+                    if any(event['type'] == 'transfer_status' and event['status'] == 'completed' for event in events):
+                        break
+                    time.sleep(.05)
+                started = [event for event in events if event['type'] == 'transfer_status' and event['status'] == 'started']
+                finished = [event for event in events if event['type'] == 'transfer_status' and event['status'] == 'completed']
+                self.assertTrue(started, events)
+                self.assertTrue(finished, events)
+                self.assertEqual(started[0]['session'], finished[0]['session'])
+                self.assertGreaterEqual(finished[0]['duration'], 0)
+                self.assertEqual((target / 'example.txt').read_text(), 'sample')
+            finally:
+                receiver.stop(); sender.stop()
     def test_webview_debug_port_is_explicit_and_validated(self):
         settings = {'REMOTE_DEBUGGING_PORT': None}
         configure_webview_debugging(settings, {})

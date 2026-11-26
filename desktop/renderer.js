@@ -2,6 +2,32 @@ const $ = id => document.getElementById(id);
 let mode = 'receive';
 let busy = false;
 let hasOutput = false;
+const senderTransfers = new Map();
+function formatDuration(seconds) {
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total / 60) % 60;
+  const remainder = String(total % 60).padStart(2, '0');
+  return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${remainder}` : `${minutes}:${remainder}`;
+}
+function renderSenderTransfers() {
+  for (const id of ['senderTransfers', 'activityTransfers']) {
+    const container = $(id);
+    container.replaceChildren();
+    container.hidden = senderTransfers.size === 0;
+    for (const transfer of senderTransfers.values()) {
+      const age = (performance.now() - transfer.updatedAt) / 1000;
+      const active = transfer.status === 'started' || transfer.status === 'active';
+      const stale = active && age > 15;
+      const label = stale ? 'Receiver status unavailable' : active ? 'Transfer in progress' : transfer.status === 'completed' ? 'Transfer complete' : 'Transfer failed';
+      const elapsed = active ? transfer.duration + Math.min(age, 15) : transfer.duration;
+      const line = document.createElement('p');
+      line.textContent = `${label} · ${transfer.address} · ${active ? 'Elapsed' : 'Duration'}: ${formatDuration(elapsed)}`;
+      container.append(line);
+    }
+  }
+}
+setInterval(() => { if (senderTransfers.size) renderSenderTransfers(); }, 1000);
 const pages = {
   transfer: { page: 'transferPage', nav: 'navTransfer', title: 'Transfer files', heading: 'transferHeading' },
   activity: { page: 'activityPage', nav: 'navActivity', title: 'Transfer activity', heading: 'activityHeading' },
@@ -111,6 +137,7 @@ $('stopButton').addEventListener('click', async () => {
 });
 window.relay.onEvent(event => {
   if (event.type === 'started') {
+    senderTransfers.clear(); renderSenderTransfers();
     hasOutput = false; $('log').textContent = ''; $('viewActivity').hidden = false;
     $('activityTitle').textContent = event.mode === 'send' ? 'Starting sharing' : 'Receiving files';
     $('status').textContent = event.mode === 'send' ? 'Starting the local server…' : 'Scanning and transferring files…';
@@ -134,6 +161,9 @@ window.relay.onEvent(event => {
     $('connectionStatus').textContent = 'Sharing is ready. Waiting for a device to access it.';
     $('activityTitle').textContent = 'Sharing is active';
     $('status').textContent = 'Share the address shown on the Transfer screen.';
+  } else if (event.type === 'transfer_status') {
+    senderTransfers.set(event.session, { status: event.status, address: event.address, duration: event.duration, updatedAt: performance.now() });
+    renderSenderTransfers();
   } else if (event.type === 'peer_activity') {
     const active = event.active > 0;
     $('flowLine').classList.toggle('active', active);
@@ -149,6 +179,12 @@ window.relay.onEvent(event => {
     $('log').scrollTop = $('log').scrollHeight;
   } else if (event.type === 'finished') {
     setBusy(false); $('stopButton').disabled = false;
+    if (event.mode === 'send') {
+      for (const transfer of senderTransfers.values()) {
+        if (transfer.status === 'started' || transfer.status === 'active') transfer.updatedAt = performance.now() - 16000;
+      }
+      renderSenderTransfers();
+    }
     $('shareInfo').hidden = true;
     $('flowLine').classList.remove('active');
     if (mode === 'send') $('rightNode').classList.remove('selected');

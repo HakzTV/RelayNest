@@ -112,6 +112,8 @@ test('desktop shares and receives actual files', async () => {
     expect(fs.readFileSync(path.join(destination, 'sample.txt'), 'utf8')).toBe('received from server');
     await page.getByRole('button', { name: 'Activity', exact: true }).click();
     await expect(page.locator('#log')).toContainText('Completed:');
+    await expect(page.locator('#log')).toContainText('Data transferred: 20 B');
+    await expect(page.locator('#log')).toContainText(/Transfer duration: \d+\.\d{2} s/);
   } finally {
     if (httpServer) await new Promise(resolve => httpServer.close(resolve));
     if (desktop) { await desktop.browser.close(); desktop.child.kill(); }

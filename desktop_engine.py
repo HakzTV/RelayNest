@@ -1,15 +1,62 @@
 """Command-line boundary used by the desktop application."""
 import argparse
 import ipaddress
+import json
+import math
 import socket
 import threading
+import time
+import uuid
 from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
+from urllib.request import Request, urlopen
 import sys
 
 import receive
+
+STATUS_PATH = '/.relaynest-transfer-status'
+
+
+class TransferReporter:
+    """Report receiver state only to servers that explicitly advertise support."""
+    def __init__(self, parsed):
+        self.url = urlunsplit((parsed.scheme, parsed.netloc, STATUS_PATH, '', ''))
+        self.session = uuid.uuid4().hex
+        self.started_at = time.monotonic()
+        self.stopped = threading.Event()
+        self.thread = None
+
+    def send(self, status, duration=None):
+        payload = json.dumps({'session': self.session, 'status': status,
+                              'duration': time.monotonic() - self.started_at if duration is None else duration}).encode('utf-8')
+        try:
+            with urlopen(Request(self.url, data=payload, method='POST', headers={'Content-Type': 'application/json'}), timeout=2):
+                pass
+        except (OSError, ValueError):
+            pass
+
+    def start(self):
+        try:
+            with urlopen(Request(self.url, method='OPTIONS'), timeout=2) as response:
+                if response.headers.get('RelayNest-Transfer-Status') != '1':
+                    return
+        except (OSError, ValueError):
+            return
+        self.send('started')
+        def heartbeat():
+            while not self.stopped.wait(5):
+                self.send('active')
+        self.thread = threading.Thread(target=heartbeat, daemon=True)
+        self.thread.start()
+
+    def finish(self, status, duration=None):
+        if self.thread is None:
+            return
+        self.stopped.set()
+        self.thread.join()
+        self.send(status, duration)
 
 
 def local_ipv4_addresses():
@@ -66,7 +113,14 @@ def main(argv=None, event_callback=None):
         receive.PARTIAL_DIRECTORY = receive.STATE_DIRECTORY / 'partials'
         receive.CHECKPOINT_FILE = receive.STATE_DIRECTORY / 'checkpoint.sqlite3'
         receive.LOG_FILE = receive.STATE_DIRECTORY / 'transfer-failures.log'
-        return receive.main()
+        reporter = TransferReporter(parsed)
+        reporter.start()
+        result = None
+        try:
+            result = receive.main(started_at=reporter.started_at)
+            return result
+        finally:
+            reporter.finish('completed' if result == 0 else 'failed', receive.summary.get('duration') if result is not None else None)
     folder = Path(args.folder).expanduser().resolve()
     if not folder.is_dir() or not 1 <= args.port <= 65535:
         parser.error('Choose an existing folder and a port between 1 and 65535.')
@@ -77,9 +131,42 @@ def main(argv=None, event_callback=None):
     RangeRequestHandler.index_pages = ()
 
     class ActivityHandler(RangeRequestHandler):
+        def do_OPTIONS(self):
+            if self.path != STATUS_PATH:
+                self.send_error(404)
+                return
+            self.send_response(204)
+            self.send_header('RelayNest-Transfer-Status', '1')
+            self.end_headers()
+
+        def do_POST(self):
+            if self.path != STATUS_PATH:
+                self.send_error(404)
+                return
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if not 0 < length <= 1024:
+                    raise ValueError('Invalid length')
+                data = json.loads(self.rfile.read(length))
+                session, status, duration = data['session'], data['status'], data['duration']
+                if (not isinstance(session, str) or len(session) != 32 or
+                        any(char not in '0123456789abcdef' for char in session) or
+                        status not in ('started', 'active', 'completed', 'failed') or
+                        isinstance(duration, bool) or not isinstance(duration, (int, float)) or
+                        not math.isfinite(duration) or not 0 <= duration <= 1e9):
+                    raise ValueError('Invalid status')
+            except (ValueError, KeyError, TypeError, UnicodeDecodeError):
+                self.send_error(400)
+                return
+            if event_callback is not None:
+                event_callback({'type': 'transfer_status', 'session': session, 'status': status,
+                                'duration': duration, 'address': self.client_address[0]})
+            self.send_response(204)
+            self.end_headers()
+
         def send_response(self, code, message=None):
             super().send_response(code, message)
-            if event_callback is not None and code in (200, 206) and not getattr(self, '_counted', False):
+            if self.command in ('GET', 'HEAD') and event_callback is not None and code in (200, 206) and not getattr(self, '_counted', False):
                 self._counted = True
                 with self.server.activity_lock:
                     self.server.active_requests += 1

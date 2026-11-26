@@ -74,6 +74,7 @@ LOG_FILE = STATE_DIRECTORY / "transfer-failures.log"
 
 summary = {
     "downloaded": 0,
+    "bytes_transferred": 0,
     "existing_skipped": 0,
     "excluded": 0,
     "failed": 0,
@@ -165,9 +166,19 @@ def print_message(message):
         print(message, flush=True)
 
 
-def increment_summary(name):
+def increment_summary(name, amount=1):
     with summary_lock:
-        summary[name] += 1
+        summary[name] += amount
+
+
+def format_bytes(size):
+    if size < 1024:
+        return "{0} B".format(size)
+    value = float(size)
+    for unit in ("KiB", "MiB", "GiB", "TiB"):
+        value /= 1024
+        if value < 1024 or unit == "TiB":
+            return "{0:.2f} {1}".format(value, unit)
 
 
 def write_failure(message):
@@ -461,6 +472,7 @@ def download_file(url, target, checkpoint):
                         if not chunk:
                             break
 
+                        increment_summary("bytes_transferred", len(chunk))
                         output.write(chunk)
 
             actual_size = partial.stat().st_size
@@ -599,7 +611,12 @@ def download_folder(url, folder, executor, pending, checkpoint):
     return pending
 
 
-def main():
+def main(started_at=None):
+    if started_at is None:
+        started_at = time.monotonic()
+    with summary_lock:
+        for key in summary:
+            summary[key] = 0
     if not BASE_URL.endswith("/"):
         raise ValueError("BASE_URL must end with /.")
 
@@ -633,6 +650,9 @@ def main():
 
     print("\nTransfer summary")
     print("Downloaded: " + str(summary["downloaded"]))
+    print("Data transferred: " + format_bytes(summary["bytes_transferred"]))
+    summary["duration"] = time.monotonic() - started_at
+    print("Transfer duration: {0:.2f} s".format(summary["duration"]))
     print(
         "Skipped existing files by date: "
         + str(summary["existing_skipped"])

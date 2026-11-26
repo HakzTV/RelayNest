@@ -52,6 +52,7 @@
                 <div id="addressControls"><select id="shareAddress" aria-label="Network address" aria-describedby="shareAddressHint" hidden></select><div class="folder-input"><input class="mono" id="shareUrl" aria-label="Share address" aria-describedby="shareAddressHint" type="text" readonly><button class="secondary" id="copyAddress" type="button">Copy</button></div></div>
                 <p class="hint" id="shareAddressMessage" role="status"></p>
               </div>
+              <div class="share-address" id="senderTransfers" aria-label="Receiver transfer status" hidden></div>
               <p class="notice">Anyone who can reach this device can browse and download the shared files. Use a trusted network and stop sharing when finished.</p>
             </div>
             <p id="formError" class="error" role="alert" hidden></p><div class="actions"><button class="primary" type="submit" id="startButton">Start transfer</button><button class="secondary" type="button" id="stopButton" hidden>Stop transfer</button><button class="text-button" type="button" id="viewActivity" hidden>View activity</button></div>
@@ -61,7 +62,7 @@
       </section>
       <section id="activityPage" class="page" aria-labelledby="activityHeading" hidden>
         <header><h1 id="activityHeading" tabindex="-1">Transfer activity</h1><p>Progress and results from your current session.</p></header>
-        <div class="activity-summary"><div><h2 id="activityTitle">Ready when you are</h2><p id="status" role="status" aria-live="polite">Choose a direction to get started.</p></div><span id="activityBadge" class="badge">Ready</span></div>
+        <div class="activity-summary"><div><h2 id="activityTitle">Ready when you are</h2><p id="status" role="status" aria-live="polite">Choose a direction to get started.</p><div id="activityTransfers" aria-label="Receiver transfer status" hidden></div></div><span id="activityBadge" class="badge">Ready</span></div>
         <section class="activity-log" aria-label="Activity log"><div class="log-heading"><span>Activity log</span><span>Current session</span></div><pre id="log">Transfer details will appear here.</pre></section>
         <p class="footnote">Activity is available while this window is open.</p>
       </section>

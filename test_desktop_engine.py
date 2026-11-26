@@ -42,9 +42,12 @@ class DesktopEngineTests(unittest.TestCase):
                 first = subprocess.run(command, capture_output=True, text=True, timeout=20)
                 self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
                 self.assertEqual((destination / 'note.txt').read_text(), 'old')
+                self.assertIn('Data transferred: 3 B', first.stdout)
+                self.assertRegex(first.stdout, r'Transfer duration: \d+\.\d{2} s')
                 second = subprocess.run(command, capture_output=True, text=True, timeout=20)
                 self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
                 self.assertIn('Skipped; local file is up to date', second.stdout)
+                self.assertIn('Data transferred: 0 B', second.stdout)
                 import os
                 item.write_text('new', encoding='utf-8')
                 new_time = (destination / 'note.txt').stat().st_mtime + 5
@@ -52,6 +55,7 @@ class DesktopEngineTests(unittest.TestCase):
                 third = subprocess.run(command, capture_output=True, text=True, timeout=20)
                 self.assertEqual(third.returncode, 0, third.stdout + third.stderr)
                 self.assertEqual((destination / 'note.txt').read_text(), 'new')
+                self.assertIn('Data transferred: 3 B', third.stdout)
             finally:
                 server.shutdown()
                 server.server_close()

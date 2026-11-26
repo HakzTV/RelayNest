@@ -85,6 +85,8 @@ label { font-weight: 500; } .hint { font-size: var(--text-sm); } input { width: 
 .connection-status { padding: 9px 20px; color: var(--muted); background: var(--panel2); border-bottom: 1px solid var(--b1); font-size: var(--text-sm); }
 .flow-line.active { border-top-style: solid; border-color: var(--accent); }
 .share-address { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--aborder); border-radius: var(--radius-control); background: var(--asoft); }
+#senderTransfers p, #activityTransfers p { color: var(--text2); font-size: var(--text-sm); }
+#activityTransfers { margin-top: 8px; }
 .share-address strong { font-weight: 600; }
 .share-address select { width: 100%; flex: 1; min-width: 0; height: var(--control-h); padding: 0 12px; font: var(--text-sm) var(--font-mono); color: var(--text); background: var(--input); border: 1px solid var(--b2); border-radius: var(--radius-control); }
 .share-address .hint:empty { display: none; }

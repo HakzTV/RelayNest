@@ -73,3 +73,14 @@ test('share address and real activity events drive the device flow', async () =>
   await page.evaluate(() => window.relayTestEvents.push({ type: 'finished', stopped: true, code: null }));
   await expect(page.locator('#shareInfo')).toBeHidden();
 });
+
+test('sender sees a live receiver timer and its final duration', async () => {
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.evaluate(() => window.relayTestEvents.push({ type: 'transfer_status', status: 'started', session: 'test-session', address: '10.0.0.3', duration: 0 }));
+  await expect(page.locator('#senderTransfers')).toContainText('Transfer in progress');
+  await expect(page.locator('#senderTransfers')).toContainText('10.0.0.3');
+  await expect.poll(async () => page.locator('#senderTransfers').textContent()).toMatch(/Elapsed: 0:0[1-9]/);
+  await page.evaluate(() => window.relayTestEvents.push({ type: 'transfer_status', status: 'completed', session: 'test-session', address: '10.0.0.3', duration: 75.2 }));
+  await expect(page.locator('#senderTransfers')).toContainText('Transfer complete');
+  await expect(page.locator('#senderTransfers')).toContainText('Duration: 1:15');
+});

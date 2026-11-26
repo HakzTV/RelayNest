@@ -45,6 +45,10 @@ The Windows desktop interface uses the WebView2 Runtime. The project also target
 4. On the receiving computer, choose **Receive**. Enter the sender's share address, choose a destination folder and select **Start transfer**.
 5. Open **Activity** to review the log and summary. Check the destination files, then stop sharing on the sender.
 
+The receive summary shows data downloaded during the current run and elapsed time, including scanning and retries. Skipped files and data resumed from an earlier run do not count toward the transferred data; retries can add to it.
+
+When both devices use a RelayNest version that supports transfer status, the sender also sees a live receiver timer and the final duration. If status updates stop arriving, the sender reports that the receiver status is unavailable. Status messages, like file sharing, are unauthenticated and intended for trusted networks.
+
 The device flow highlights activity while a client is accessing the shared folder and shows the last request afterward. This indicates HTTP activity, not a persistent or authenticated device pairing.
 
 A single app window handles one active send or receive session at a time. For a one-computer test, use two app windows, two different folders, and `http://127.0.0.1:8000/` as described in [DEVELOPMENT.md](DEVELOPMENT.md).
