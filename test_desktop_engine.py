@@ -6,11 +6,26 @@ import unittest
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
+
+import desktop_engine
 
 ROOT = Path(__file__).resolve().parent
 
 
 class DesktopEngineTests(unittest.TestCase):
+    def test_local_addresses_filter_loopback_and_prioritize_route(self):
+        entries = [(None, None, None, None, ('127.0.0.1', 0)),
+                   (None, None, None, None, ('10.0.0.2', 0)),
+                   (None, None, None, None, ('192.168.1.7', 0))]
+        class Probe:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def connect(self, address): pass
+            def getsockname(self): return ('192.168.1.7', 1234)
+        with patch('desktop_engine.socket.getaddrinfo', return_value=entries), patch('desktop_engine.socket.socket', return_value=Probe()):
+            self.assertEqual(desktop_engine.local_ipv4_addresses(), ['192.168.1.7', '10.0.0.2'])
+
     def test_receive_then_skip_then_update(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

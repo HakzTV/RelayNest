@@ -25,12 +25,11 @@ These screenshots show the source-based desktop app in its ready state.
 On Windows, install Python 3.13 and Node.js. From the RelayNest project folder in PowerShell:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-desktop.txt
+npm install
 npm start
 ```
 
-`npm start` uses the project `.venv` when available. Alternatively, start the app without Node.js:
+`npm install` creates a project `.venv` if needed and installs the Python desktop requirements, including `requirements.txt`. Python must be installed and available on your PATH. `npm start` uses the project `.venv` when available. Alternatively, after setup, start the app without Node.js:
 
 ```powershell
 .\.venv\Scripts\python.exe desktop_host.py
@@ -41,10 +40,12 @@ The Windows desktop interface uses the WebView2 Runtime. The project also target
 ## Transfer between two computers
 
 1. Start RelayNest on both computers. Use a trusted network and test with non-sensitive files first.
-2. On the computer **with the files**, choose **Send**, select the source folder, set the port if needed, and choose **Start sharing**. The Activity page shows when the server is listening. Keep the window open.
-3. On the sender, run `ipconfig` in a terminal and note its local IPv4 address. The receiver must be able to reach that address and the selected port; a firewall may need an approved rule.
-4. On the receiving computer, choose **Receive**. Enter the sender's address, such as `http://192.168.1.10:8000/`, replacing the example IP and port with the actual values. Choose a destination folder and select **Start transfer**.
+2. On the computer **with the files**, choose **Send**, select the source folder, set the port if needed, and choose **Start sharing**. Keep the window open.
+3. Copy the displayed share address and give it to the receiver. If several network addresses are available, select the one for the network both computers use. If no address is shown, use `ipconfig` to find the sender's IPv4 address and combine it with the selected port, for example `http://192.168.1.10:8000/`. A firewall may need an approved rule.
+4. On the receiving computer, choose **Receive**. Enter the sender's share address, choose a destination folder and select **Start transfer**.
 5. Open **Activity** to review the log and summary. Check the destination files, then stop sharing on the sender.
+
+The device flow highlights activity while a client is accessing the shared folder and shows the last request afterward. This indicates HTTP activity, not a persistent or authenticated device pairing.
 
 A single app window handles one active send or receive session at a time. For a one-computer test, use two app windows, two different folders, and `http://127.0.0.1:8000/` as described in [DEVELOPMENT.md](DEVELOPMENT.md).
 

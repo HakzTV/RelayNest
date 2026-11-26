@@ -48,7 +48,7 @@ def run_worker(mode, value, target, output):
     sys.stderr = sys.stdout
     try:
         import desktop_engine
-        result = desktop_engine.main([mode, value, target])
+        result = desktop_engine.main([mode, value, target], event_callback=output.put)
         raise SystemExit(result)
     except SystemExit:
         raise
@@ -117,7 +117,10 @@ class DesktopAPI:
         while True:
             try:
                 text = output.get(timeout=0.1)
-                self._events.put({'type': 'output', 'text': text})
+                if isinstance(text, dict):
+                    self._events.put(text)
+                else:
+                    self._events.put({'type': 'output', 'text': text})
             except Empty:
                 if not process.is_alive():
                     break

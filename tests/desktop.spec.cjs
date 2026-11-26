@@ -86,11 +86,15 @@ test('desktop shares and receives actual files', async () => {
     await page.getByLabel('Port', { exact: true }).fill(String(sourcePort));
     await page.getByRole('button', { name: 'Start sharing' }).click();
     await expect(page.getByRole('button', { name: 'Stop sharing' })).toBeVisible();
+    await expect(page.locator('#shareInfo')).toBeVisible();
+    await expect(page.locator('#connectionStatus')).toContainText('Waiting for a device');
     await expect.poll(async () => {
       try { return await (await fetch(`http://127.0.0.1:${sourcePort}/sample.txt`)).text(); }
       catch { return ''; }
     }, { timeout: 30000 }).toBe('from RelayNest');
+    await expect(page.locator('#connectionStatus')).toContainText('Last request from 127.0.0.1');
     await page.getByRole('button', { name: 'Stop sharing' }).click();
+    await expect(page.locator('#shareInfo')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Start sharing' })).toBeEnabled({ timeout: 30000 });
 
     const body = Buffer.from('received from server');

@@ -4,6 +4,7 @@
   "private": true,
   "description": "RelayNest desktop transfer application",
   "scripts": {
+    "postinstall": "node scripts/install-python.cjs",
     "start": "python launch_desktop.py",
     "test:ui": "playwright test",
     "test:engine": "python run_engine_tests.py",

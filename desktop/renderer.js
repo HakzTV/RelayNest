@@ -33,6 +33,9 @@ function selectMode(next) {
   $('formDescription').textContent = receiving ? 'Connect to the sending device and choose where files go.' : 'Choose a folder and start sharing on your network.';
   $('startButton').textContent = receiving ? 'Start transfer' : 'Start sharing';
   $('formError').hidden = true;
+  $('shareInfo').hidden = true;
+  $('flowLine').classList.remove('active');
+  $('connectionStatus').textContent = receiving ? 'Ready to receive' : 'Not sharing';
 }
 function setBusy(value) {
   busy = value;
@@ -41,6 +44,20 @@ function setBusy(value) {
   $('stopButton').textContent = mode === 'send' ? 'Stop sharing' : 'Stop transfer';
 }
 function setBadge(text) { $('stateBadge').textContent = text; $('activityBadge').textContent = text; }
+$('shareAddress').addEventListener('change', () => { $('shareUrl').value = $('shareAddress').value; $('shareAddressMessage').textContent = ''; });
+$('copyAddress').addEventListener('click', async () => {
+  const value = $('shareUrl').value;
+  if (!value) return;
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(value);
+    $('shareAddressMessage').textContent = 'Address copied.';
+  } catch (_) {
+    $('shareAddressMessage').textContent = 'Could not copy automatically. Select the address and copy it manually.';
+    $('shareUrl').focus();
+    $('shareUrl').select();
+  }
+});
 $('receiveTab').addEventListener('click', () => selectMode('receive'));
 $('sendTab').addEventListener('click', () => selectMode('send'));
 for (const [button, input] of [['browseDestination', 'destination'], ['browseShare', 'shareFolder'], ['browseDefault', 'defaultDestination']]) {
@@ -98,13 +115,45 @@ window.relay.onEvent(event => {
     $('activityTitle').textContent = event.mode === 'send' ? 'Starting sharing' : 'Receiving files';
     $('status').textContent = event.mode === 'send' ? 'Starting the local server…' : 'Scanning and transferring files…';
     setBadge('Active');
+    $('flowLine').classList.remove('active');
+    $('connectionStatus').textContent = event.mode === 'send' ? 'Starting the share…' : 'Connecting to the sender…';
+  } else if (event.type === 'share_ready') {
+    const select = $('shareAddress');
+    select.replaceChildren();
+    for (const address of event.addresses) {
+      const option = document.createElement('option');
+      option.value = `http://${address}:${event.port}/`;
+      option.textContent = option.value;
+      select.append(option);
+    }
+    $('shareInfo').hidden = false;
+    $('shareAddress').hidden = event.addresses.length < 2;
+    $('shareUrl').value = select.value;
+    $('addressControls').hidden = event.addresses.length === 0;
+    $('shareAddressMessage').textContent = event.addresses.length ? '' : 'No local IPv4 address found. Check your network connection or enter the address manually on the other device.';
+    $('connectionStatus').textContent = 'Sharing is ready. Waiting for a device to access it.';
+    $('activityTitle').textContent = 'Sharing is active';
+    $('status').textContent = 'Share the address shown on the Transfer screen.';
+  } else if (event.type === 'peer_activity') {
+    const active = event.active > 0;
+    $('flowLine').classList.toggle('active', active);
+    $('rightNode').classList.toggle('selected', active);
+    $('connectionStatus').textContent = active ? `Device ${event.address} is accessing the share.` : `Last request from ${event.address}. Waiting for activity.`;
+  } else if (event.type === 'receive_connected') {
+    $('leftNode').classList.add('selected');
+    $('flowLine').classList.add('active');
+    $('connectionStatus').textContent = 'Connected to the sender. Receiving files…';
   } else if (event.type === 'output') {
     if (!hasOutput) { $('log').textContent = ''; hasOutput = true; }
     $('log').textContent += event.text;
     $('log').scrollTop = $('log').scrollHeight;
-    if (mode === 'send' && event.text.includes('Listening on port:')) { $('activityTitle').textContent = 'Sharing is active'; $('status').textContent = 'Use this device’s IP address and port on the receiving device.'; }
   } else if (event.type === 'finished') {
     setBusy(false); $('stopButton').disabled = false;
+    $('shareInfo').hidden = true;
+    $('flowLine').classList.remove('active');
+    if (mode === 'send') $('rightNode').classList.remove('selected');
+    else $('leftNode').classList.remove('selected');
+    $('connectionStatus').textContent = event.stopped ? 'Session stopped.' : event.code === 0 ? 'Transfer complete.' : 'Connection or transfer failed. See Activity for details.';
     setBadge(event.stopped ? 'Stopped' : event.code === 0 ? 'Completed' : 'Failed');
     $('activityTitle').textContent = event.stopped ? 'Session stopped' : event.code === 0 ? 'Transfer complete' : 'Session failed';
     $('status').textContent = event.stopped ? 'You can start again when ready.' : event.code === 0 ? 'Review the activity log for the transfer summary.' : 'Review the activity log for details, then try again.';

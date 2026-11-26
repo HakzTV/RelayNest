@@ -47,8 +47,15 @@ class DesktopAPITests(unittest.TestCase):
                             time.sleep(.05)
                     else:
                         self.fail('Share did not start')
-                    api.stop()
                     events = []
+                    for _ in range(100):
+                        events.extend(api.poll())
+                        if any(e['type'] == 'peer_activity' and e['active'] == 0 for e in events) and any(e['type'] == 'share_ready' for e in events):
+                            break
+                        time.sleep(.05)
+                    self.assertTrue(any(e['type'] == 'share_ready' and e['port'] == port for e in events), events)
+                    self.assertTrue(any(e['type'] == 'peer_activity' and e['address'] == '127.0.0.1' for e in events), events)
+                    api.stop()
                     for _ in range(200):
                         events.extend(api.poll())
                         if any(event['type'] == 'finished' for event in events):
@@ -79,6 +86,7 @@ class DesktopAPITests(unittest.TestCase):
                     if any(event['type'] == 'finished' for event in events):
                         break
                     time.sleep(.05)
+                self.assertTrue(any(event['type'] == 'receive_connected' for event in events), events)
                 self.assertEqual((target / 'example.txt').read_text(), 'sample')
                 self.assertTrue(any(event['type'] == 'output' and 'Completed:' in event['text'] for event in events))
                 self.assertTrue(any(event['type'] == 'finished' and event['code'] == 0 for event in events), events)

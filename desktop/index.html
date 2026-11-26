@@ -36,7 +36,8 @@
           <button class="direction" type="button" id="sendTab" aria-label="Send" aria-pressed="false"><span class="direction-icon"><svg class="icon"><use href="#i-send"/></svg></span><span class="direction-copy"><strong>Send</strong><span>Share a folder from this device</span></span></button>
         </div>
         <section class="transfer-panel" aria-labelledby="formTitle">
-          <div class="device-flow" aria-label="Transfer direction"><div class="device-node" id="leftNode"><span class="device-icon"><svg class="icon"><use href="#i-device"/></svg></span><span id="leftLabel">Sending device</span></div><span class="flow-line" aria-hidden="true"></span><span class="flow-arrow" aria-hidden="true">›</span><div class="device-node selected" id="rightNode"><span class="device-icon"><svg class="icon"><use href="#i-device"/></svg></span><span id="rightLabel">This device</span></div></div>
+          <div class="device-flow" aria-label="Transfer direction"><div class="device-node" id="leftNode"><span class="device-icon"><svg class="icon"><use href="#i-device"/></svg></span><span id="leftLabel">Sending device</span></div><span class="flow-line" id="flowLine" aria-hidden="true"></span><span class="flow-arrow" aria-hidden="true">›</span><div class="device-node selected" id="rightNode"><span class="device-icon"><svg class="icon"><use href="#i-device"/></svg></span><span id="rightLabel">This device</span></div></div>
+          <p class="connection-status" id="connectionStatus" role="status" aria-live="polite">Ready to receive</p>
           <form id="transferForm" novalidate>
             <div class="form-intro"><h2 id="formTitle">Receive files</h2><p id="formDescription">Connect to the sending device and choose where files go.</p></div>
             <div id="receiveFields" class="fields">
@@ -46,6 +47,11 @@
             <div id="sendFields" class="fields" hidden>
               <div class="field"><label for="shareFolder">Folder to share</label><p class="hint" id="shareHint">Everything in this folder can be browsed by connected devices.</p><div class="folder-input"><input id="shareFolder" type="text" placeholder="Choose a folder" aria-describedby="shareHint"><button type="button" class="secondary" id="browseShare"><svg class="icon"><use href="#i-folder"/></svg>Browse</button></div></div>
               <div class="field"><label for="port">Port</label><input id="port" class="mono port" type="number" value="8000" min="1" max="65535"></div>
+              <div class="share-address" id="shareInfo" hidden>
+                <div><strong>Share address</strong><p class="hint" id="shareAddressHint">Enter this address on the receiving device. If you have multiple networks, choose the address on the same network.</p></div>
+                <div id="addressControls"><select id="shareAddress" aria-label="Network address" aria-describedby="shareAddressHint" hidden></select><div class="folder-input"><input class="mono" id="shareUrl" aria-label="Share address" aria-describedby="shareAddressHint" type="text" readonly><button class="secondary" id="copyAddress" type="button">Copy</button></div></div>
+                <p class="hint" id="shareAddressMessage" role="status"></p>
+              </div>
               <p class="notice">Anyone who can reach this device can browse and download the shared files. Use a trusted network and stop sharing when finished.</p>
             </div>
             <p id="formError" class="error" role="alert" hidden></p><div class="actions"><button class="primary" type="submit" id="startButton">Start transfer</button><button class="secondary" type="button" id="stopButton" hidden>Stop transfer</button><button class="text-button" type="button" id="viewActivity" hidden>View activity</button></div>

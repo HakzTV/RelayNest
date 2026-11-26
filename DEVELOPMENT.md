@@ -4,16 +4,16 @@ RelayNest uses Python and pywebview to open a desktop window. On Windows pywebvi
 
 ## Windows setup and launch
 
-From PowerShell in the project folder, use the same Python for installation and launch:
+Install Python 3 and Node.js, then run from PowerShell in the project folder:
 
 ```powershell
-python -m pip install -r requirements-desktop.txt
-python desktop_host.py
+npm install
+npm start
 ```
 
-`npm start` also launches the app, using the project `.venv` when present; Node is not needed to run the app itself. WebView2 Runtime is required on Windows. If the runtime or Python packages are missing or blocked, contact your administrator or install them according to your organization's approved process.
+`npm install` creates `.venv` if needed and installs `requirements-desktop.txt`, which includes `requirements.txt`. Installation requires a working Python 3, pip and access to the configured package source. `npm start` uses the project `.venv` when present; Node is not needed to run the app itself. WebView2 Runtime is required on Windows. If the runtime or Python packages are missing or blocked, contact your administrator or install them according to your organization's approved process.
 
-For an isolated Python environment instead:
+To set up and run without npm instead:
 
 ```powershell
 python -m venv .venv
@@ -45,7 +45,7 @@ Python tests exercise validation, engine events, and a local HTTP transfer inclu
 4. Run Receive again; the existing file should be skipped. Edit the source file, ensure its modification time is at least two seconds later, and run again. Check the new contents.
 5. Stop sharing in the first window. Check that another receive fails and that the log explains it. Close both windows.
 
-For two machines, use the sender's local IP and port instead of `127.0.0.1`. Use a trusted network: the transfer server is currently unauthenticated and unencrypted. Anyone who can reach it can browse the shared folder. The receiver compares timestamps with one-second precision, does not hash-verify contents, keeps newer local files, and does not delete extra files. Do not run two receivers against the same destination.
+For two machines, copy the share address shown after starting the sender and enter it on the receiver. If multiple addresses are shown, choose the one for the network both machines use; an address alone does not guarantee reachability. Confirm the sender's device flow shows activity during requests. Use a trusted network: the transfer server is currently unauthenticated and unencrypted, and activity does not indicate authenticated pairing. Anyone who can reach it can browse the shared folder. The receiver compares timestamps with one-second precision, does not hash-verify contents, keeps newer local files, and does not delete extra files. Do not run two receivers against the same destination.
 
 ## Current limitations
 

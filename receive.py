@@ -81,6 +81,9 @@ summary = {
 
 seen_folders = set()
 
+# Optional callback for a desktop host after a valid directory listing is received.
+directory_loaded_callback = None
+
 print_lock = threading.Lock()
 summary_lock = threading.Lock()
 
@@ -230,6 +233,8 @@ def get_directory_links(url):
 
     parser = LinkParser()
     parser.feed(page)
+    if directory_loaded_callback is not None:
+        directory_loaded_callback(url)
     return parser.links
 
 
